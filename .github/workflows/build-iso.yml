@@ -1,0 +1,37 @@
+name: Build CallieOS ISO
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
+      - name: Make Build Script Executable
+        run: chmod +x build-iso.sh
+
+      - name: Run ISO Builder
+        run: ./build-iso.sh
+
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CallieOS-Mint-XFCE-ISO
+          path: /tmp/iso_work/output/CallieOS-Mint-XFCE.iso
+          compression-level: 0
