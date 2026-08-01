@@ -29,10 +29,6 @@ sudo rm -rf "$WORK_DIR/extracted"/*
 7z x "$WORK_DIR/$ISO_NAME" -o"$WORK_DIR/extracted" -y
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-echo "=== Listando conteúdo extraído para diagnóstico ==="
-find "$WORK_DIR/extracted" -maxdepth 3
-
-# Busca ampla e case-insensitive pelo arquivo SquashFS
 SFS_PATH=$(find "$WORK_DIR/extracted" -iname "*squashfs*" -o -iname "*.sfs" | head -n 1)
 
 if [ -z "$SFS_PATH" ]; then
@@ -51,7 +47,6 @@ sudo cp /etc/resolv.conf "$WORK_DIR/rootfs/etc/resolv.conf"
 
 sudo mkdir -p "$WORK_DIR/rootfs/usr/share/backgrounds/callie"
 sudo mkdir -p "$WORK_DIR/rootfs/usr/share/pixmaps"
-sudo mkdir -p "$WORK_DIR/rootfs/usr/share/backgrounds"
 sudo mkdir -p "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml"
 
 if [ -f "./assets/wallpaper1.png" ]; then
@@ -89,9 +84,20 @@ apt-get clean
 rm -rf /var/lib/apt/lists/*
 EOF
 
-echo "=== [5/6] Recompactando o SquashFS com lz4 ==="
+echo "=== [5/6] Criando Swap temporário e Recompactando o SquashFS sem risco de OOM ==="
+# Cria 4GB de swap para garantir que o GitHub Actions não mate o processo por falta de RAM
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
 sudo rm -f "$SFS_PATH"
-sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -no-xattrs -processors 2 -noappend
+# Usando lz4, bloco otimizado de 256k e sem checagem de duplicatas para poupar RAM ao máximo
+sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -b 256k -no-duplicates -no-xattrs -processors 2 -noappend
+
+# Desativa o swap após terminar
+sudo swapoff /swapfile
+sudo rm -f /swapfile
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
 cd "$WORK_DIR/extracted"
