@@ -36,14 +36,15 @@ sudo rm -rf "$WORK_DIR/extracted"/*
 7z x "$WORK_DIR/$ISO_NAME" -o"$WORK_DIR/extracted" -y
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-SFS_PATH=$(find "$WORK_DIR/extracted" -iname "*squashfs*" -o -iname "*.sfs" | head -n 1)
+# BUSCA EXATA: Foca estritamente no filesystem.squashfs principal do Ubuntu
+SFS_PATH=$(find "$WORK_DIR/extracted" -name "filesystem.squashfs" | head -n 1)
 
 if [ -z "$SFS_PATH" ]; then
-    echo "Erro: Arquivo squashfs não encontrado!"
+    echo "Erro: Arquivo principal filesystem.squashfs não encontrado!"
     exit 1
 fi
 
-echo "Arquivo SquashFS encontrado em: $SFS_PATH"
+echo "Arquivo SquashFS principal encontrado em: $SFS_PATH"
 
 echo "=== [4/6] Extraindo o sistema de arquivos (Rootfs) ==="
 sudo unsquashfs -d "$WORK_DIR/rootfs" "$SFS_PATH"
@@ -101,7 +102,6 @@ sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 
-# Recria o caminho onde ficava o squashfs original
 NEW_SFS_DIR=$(dirname "$SFS_PATH")
 sudo mkdir -p "$NEW_SFS_DIR"
 
