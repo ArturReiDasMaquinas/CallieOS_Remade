@@ -5,8 +5,6 @@ echo "=== [1/6] Instalando dependências de build ==="
 sudo apt-get update
 sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync
 
-# CORREÇÃO CRÍTICA: Usando o diretório local do repositório em vez de /tmp
-# para evitar o estouro de espaço no tmpfs do GitHub Actions.
 WORK_DIR="./iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
@@ -73,17 +71,19 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
-# Instalando a interface XFCE e os pacotes personalizados
+# Instalando pacotes e limpando listas inúteis para economizar espaço e RAM
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y xubuntu-desktop fastfetch curl wget git steam lutris flatpak xfce4-goodies
 apt-get clean
+rm -rf /var/lib/apt/lists/*
 EOF
 
-echo "=== [5/6] Recompactando o SquashFS ==="
+echo "=== [5/6] Recompactando o SquashFS de forma controlada ==="
 sudo rm -f "$SFS_PATH"
-sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp gzip -b 1024k -noappend
+# O parâmetro '-processors 2' impede que o processo exploda a memória RAM do servidor
+sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp gzip -b 1024k -processors 2 -noappend
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
 cd "$WORK_DIR/extracted"
@@ -101,7 +101,6 @@ sudo xorriso -as mkisofs \
     -output "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" \
     .
 
-# Copia a ISO gerada para a raiz do repositório
 cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
 
 echo "=== Sucesso! ISO gerada e copiada para a raiz do repositório ==="
