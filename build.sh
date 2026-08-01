@@ -100,18 +100,24 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
-# Instalando pacotes e fazendo limpeza profunda de cache
+# Habilitando repositórios universe e i386 para Steam/fastfetch e instalando pacotes
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
+dpkg --add-architecture i386
 apt-get update
-apt-get install -y xubuntu-desktop fastfetch curl wget git steam lutris flatpak xfce4-goodies
+apt-get install -y software-properties-common
+add-apt-repository -y universe
+apt-get update
+apt-get install -y xubuntu-desktop fastfetch curl wget git steam-installer lutris flatpak xfce4-goodies
 apt-get clean
 apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*
 rm -rf /tmp/* /var/tmp/*
 EOF
 
-echo "=== [5/6] Criando 8GB de Swap e Recompactando com segurança máxima ==="
+echo "=== [5/6] Limpando e Criando 8GB de Swap com segurança, depois Recompactando ==="
+sudo swapoff /swapfile 2>/dev/null || true
+sudo rm -f /swapfile
 sudo fallocate -l 8G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
@@ -120,10 +126,9 @@ sudo swapon /swapfile
 NEW_SFS_DIR=$(dirname "$SFS_PATH")
 sudo mkdir -p "$NEW_SFS_DIR"
 
-# Uso de -processors 1 e -no-recovery para zerar risco de estourar a RAM
 sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -b 256k -no-recovery -no-duplicates -no-xattrs -processors 1 -noappend
 
-sudo swapoff /swapfile
+sudo swapoff /swapfile || true
 sudo rm -f /swapfile
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
