@@ -131,20 +131,23 @@ sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp zstd -Xcompression-level 3 
 sudo swapoff /swapfile || true
 sudo rm -f /swapfile
 
-echo "=== [6/6] Gerando a nova ISO final da CallieOS com caminhos dinâmicos ==="
+echo "=== [6/6] Gerando a nova ISO final da CallieOS com segurança total ==="
 FINAL_ISO_PATH="$(pwd)/iso_work/output/CallieOS-Mint-XFCE.iso"
 mkdir -p "$(dirname "$FINAL_ISO_PATH")"
 
 cd "$WORK_DIR/extracted"
 
-# Encontra os arquivos de boot de forma 100% dinâmica na ISO extraída
+# Configuração dinâmica e segura dos parâmetros de boot
 ELTORITO_BOOT=$(find . -name "eltorito.img" | head -n 1 | sed 's|^\./||')
-BOOT_CAT=$(find . -name "boot.cat" | head -n 1 | sed 's|^\./||')
-EFI_IMG=$(find . -name "efi.img" | head -n 1 | sed 's|^\./||')
+EFI_IMG=$(find . -name "efi.img" -o -name "efiboot.img" | head -n 1 | sed 's|^\./||')
+if [ -z "$EFI_IMG" ]; then
+    EFI_IMG=$(find . -path "*/boot/*" -name "*.img" | head -n 1 | sed 's|^\./||')
+fi
+BOOT_CAT="boot/grub/boot.cat"
 
-echo "Eltorito Boot encontrado: $ELTORITO_BOOT"
-echo "Boot Catalog encontrado: $BOOT_CAT"
-echo "EFI Image encontrada: $EFI_IMG"
+echo "Eltorito Boot: $ELTORITO_BOOT"
+echo "Boot Catalog: $BOOT_CAT"
+echo "EFI Image: $EFI_IMG"
 
 sudo xorriso -as mkisofs \
     -iso-level 3 \
