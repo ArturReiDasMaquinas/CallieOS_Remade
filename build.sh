@@ -1,11 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "=== [0/6] Liberando espaço em disco no runner do GitHub ==="
+echo "=== [0/6] Limpeza agressiva de espaço no runner ==="
+sudo docker image prune -a --force || true
 sudo rm -rf /usr/local/lib/android
 sudo rm -rf /opt/ghc
 sudo rm -rf /opt/hostedtoolcache
 sudo rm -rf /usr/share/dotnet
+sudo rm -rf /usr/local/share/boost
+sudo rm -rf /nix
 df -h
 
 echo "=== [1/6] Instalando dependências de build ==="
@@ -36,7 +39,7 @@ sudo rm -rf "$WORK_DIR/extracted"/*
 7z x "$WORK_DIR/$ISO_NAME" -o"$WORK_DIR/extracted" -y
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-# BUSCA INTELIGENTE: Seleciona automaticamente o maior .squashfs (o sistema operacional real)
+# Seleciona automaticamente o maior .squashfs (sistema principal)
 SFS_PATH=""
 MAX_SIZE=0
 while IFS= read -r file; do
@@ -54,12 +57,12 @@ if [ -z "$SFS_PATH" ]; then
     exit 1
 fi
 
-echo "Arquivo SquashFS principal selecionado (tamanho: $MAX_SIZE bytes): $SFS_PATH"
+echo "Arquivo SquashFS principal selecionado: $SFS_PATH"
 
 echo "=== [4/6] Extraindo o sistema de arquivos (Rootfs) ==="
 sudo unsquashfs -d "$WORK_DIR/rootfs" "$SFS_PATH"
 
-# Remove o squashfs original e a ISO base para liberar gigabytes de espaço em disco
+# Remove o squashfs original e a ISO base para liberar gigabytes
 sudo rm -f "$SFS_PATH"
 sudo rm -f "$WORK_DIR/$ISO_NAME"
 
@@ -97,17 +100,19 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
-# Instalando pacotes, Steam, Lutris e limpando listas do apt
+# Instalando pacotes e fazendo limpeza profunda de cache
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y xubuntu-desktop fastfetch curl wget git steam lutris flatpak xfce4-goodies
 apt-get clean
+apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*
+rm -rf /tmp/* /var/tmp/*
 EOF
 
-echo "=== [5/6] Criando Swap e Recompactando o SquashFS ==="
-sudo fallocate -l 4G /swapfile
+echo "=== [5/6] Criando 8GB de Swap e Recompactando com segurança máxima ==="
+sudo fallocate -l 8G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
@@ -115,7 +120,8 @@ sudo swapon /swapfile
 NEW_SFS_DIR=$(dirname "$SFS_PATH")
 sudo mkdir -p "$NEW_SFS_DIR"
 
-sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -b 256k -no-duplicates -no-xattrs -processors 2 -noappend
+# Uso de -processors 1 e -no-recovery para zerar risco de estourar a RAM
+sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -b 256k -no-recovery -no-duplicates -no-xattrs -processors 1 -noappend
 
 sudo swapoff /swapfile
 sudo rm -f /swapfile
