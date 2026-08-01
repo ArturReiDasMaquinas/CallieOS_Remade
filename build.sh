@@ -8,11 +8,19 @@ sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync
 WORK_DIR="/tmp/iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
-# URL oficial e permanente do Ubuntu 24.04 LTS (Link estável que nunca dá 404)
-ISO_URL="https://releases.ubuntu.com/24.04/ubuntu-24.04-desktop-amd64.iso"
+echo "=== [2/6] Determinando e baixando a ISO base do Ubuntu 24.04 LTS dinamicamente ==="
+BASE_URL="https://releases.ubuntu.com/24.04"
+# Captura o nome exato do arquivo ISO atual na página de releases para evitar qualquer erro 404
+ISO_FILE=$(curl -s "$BASE_URL/" | grep -oE 'ubuntu-24.04([0-9.-]*)-desktop-amd64\.iso' | head -n 1)
+
+if [ -z "$ISO_FILE" ]; then
+    ISO_FILE="ubuntu-24.04-desktop-amd64.iso"
+fi
+
+ISO_URL="$BASE_URL/$ISO_FILE"
 ISO_NAME="base.iso"
 
-echo "=== [2/6] Baixando ISO base ==="
+echo "Baixando de: $ISO_URL"
 if [ ! -f "$WORK_DIR/$ISO_NAME" ]; then
     wget -O "$WORK_DIR/$ISO_NAME" "$ISO_URL"
 fi
@@ -64,7 +72,7 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
-# Instalando a interface XFCE junto com os seus programas personalizados
+# Instalando a interface XFCE e os pacotes personalizados no ambiente chroot
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -92,8 +100,12 @@ sudo xorriso -as mkisofs \
     -output "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" \
     .
 
-# Copia a ISO gerada para a raiz do repositório
-cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "$GITHUB_WORKSPACE/CallieOS-Mint-XFCE.iso" 2>/dev/null || cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
+# Copia a ISO gerada para a raiz do repositório com suporte ao GitHub Actions
+if [ -n "$GITHUB_WORKSPACE" ]; then
+    cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "$GITHUB_WORKSPACE/CallieOS-Mint-XFCE.iso"
+else
+    cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
+fi
 
 echo "=== Sucesso! ISO gerada e copiada para a raiz do repositório ==="
 ls -lh ./CallieOS-Mint-XFCE.iso
