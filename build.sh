@@ -28,7 +28,6 @@ echo "=== [3/6] Extraindo a ISO ==="
 sudo xorriso -osirrox on -indev "$WORK_DIR/$ISO_NAME" -extract / "$WORK_DIR/extracted"
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-# BUSCA ROBUSTA: Procura o squashfs em qualquer subpasta extraída
 SFS_PATH=$(find "$WORK_DIR/extracted" -name "*filesystem.squashfs" -o -name "*.sfs" | head -n 1)
 
 if [ -z "$SFS_PATH" ]; then
@@ -84,9 +83,10 @@ apt-get clean
 rm -rf /var/lib/apt/lists/*
 EOF
 
-echo "=== [5/6] Recompactando o SquashFS de forma controlada ==="
+echo "=== [5/6] Recompactando o SquashFS com lz4 (Ultra leve e sem travamentos) ==="
 sudo rm -f "$SFS_PATH"
-sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp gzip -b 1024k -processors 2 -noappend
+# Usando lz4 e desativando xattrs para zerar o consumo excessivo de RAM
+sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -no-xattrs -processors 2 -noappend
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
 cd "$WORK_DIR/extracted"
