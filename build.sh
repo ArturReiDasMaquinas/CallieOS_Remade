@@ -24,13 +24,16 @@ if [ ! -f "$WORK_DIR/$ISO_NAME" ]; then
     wget -O "$WORK_DIR/$ISO_NAME" "$ISO_URL"
 fi
 
-echo "=== [3/6] Extraindo a ISO com 7z (100% confiável) ==="
-sudo rm -rf "$WORK_DIR/extracted/*"
+echo "=== [3/6] Extraindo a ISO com 7z ==="
+sudo rm -rf "$WORK_DIR/extracted"/*
 7z x "$WORK_DIR/$ISO_NAME" -o"$WORK_DIR/extracted" -y
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-# Busca exata do SquashFS na estrutura do Ubuntu
-SFS_PATH=$(find "$WORK_DIR/extracted" -name "filesystem.squashfs" -o -name "*.sfs" | head -n 1)
+echo "=== Listando conteúdo extraído para diagnóstico ==="
+find "$WORK_DIR/extracted" -maxdepth 3
+
+# Busca ampla e case-insensitive pelo arquivo SquashFS
+SFS_PATH=$(find "$WORK_DIR/extracted" -iname "*squashfs*" -o -iname "*.sfs" | head -n 1)
 
 if [ -z "$SFS_PATH" ]; then
     echo "Erro: Arquivo squashfs não encontrado!"
@@ -48,6 +51,7 @@ sudo cp /etc/resolv.conf "$WORK_DIR/rootfs/etc/resolv.conf"
 
 sudo mkdir -p "$WORK_DIR/rootfs/usr/share/backgrounds/callie"
 sudo mkdir -p "$WORK_DIR/rootfs/usr/share/pixmaps"
+sudo mkdir -p "$WORK_DIR/rootfs/usr/share/backgrounds"
 sudo mkdir -p "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml"
 
 if [ -f "./assets/wallpaper1.png" ]; then
