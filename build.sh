@@ -3,7 +3,7 @@ set -e
 
 echo "=== [1/6] Instalando dependências de build ==="
 sudo apt-get update
-sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync
+sudo apt-get install -y squashfs-tools xorriso p7zip-full wget curl rsync
 
 WORK_DIR="./iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
@@ -24,11 +24,13 @@ if [ ! -f "$WORK_DIR/$ISO_NAME" ]; then
     wget -O "$WORK_DIR/$ISO_NAME" "$ISO_URL"
 fi
 
-echo "=== [3/6] Extraindo a ISO ==="
-sudo xorriso -osirrox on -indev "$WORK_DIR/$ISO_NAME" -extract / "$WORK_DIR/extracted"
+echo "=== [3/6] Extraindo a ISO com 7z (100% confiável) ==="
+sudo rm -rf "$WORK_DIR/extracted/*"
+7z x "$WORK_DIR/$ISO_NAME" -o"$WORK_DIR/extracted" -y
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-SFS_PATH=$(find "$WORK_DIR/extracted" -name "*filesystem.squashfs" -o -name "*.sfs" | head -n 1)
+# Busca exata do SquashFS na estrutura do Ubuntu
+SFS_PATH=$(find "$WORK_DIR/extracted" -name "filesystem.squashfs" -o -name "*.sfs" | head -n 1)
 
 if [ -z "$SFS_PATH" ]; then
     echo "Erro: Arquivo squashfs não encontrado!"
@@ -83,9 +85,8 @@ apt-get clean
 rm -rf /var/lib/apt/lists/*
 EOF
 
-echo "=== [5/6] Recompactando o SquashFS com lz4 (Ultra leve e sem travamentos) ==="
+echo "=== [5/6] Recompactando o SquashFS com lz4 ==="
 sudo rm -f "$SFS_PATH"
-# Usando lz4 e desativando xattrs para zerar o consumo excessivo de RAM
 sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -no-xattrs -processors 2 -noappend
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
