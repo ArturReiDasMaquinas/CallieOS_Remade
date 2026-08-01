@@ -28,11 +28,15 @@ echo "=== [3/6] Extraindo a ISO ==="
 sudo xorriso -osirrox on -indev "$WORK_DIR/$ISO_NAME" -extract / "$WORK_DIR/extracted"
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-SFS_PATH=$(find "$WORK_DIR/extracted" -name "filesystem.squashfs" -o -name "airootfs.sfs" -quit)
+# BUSCA ROBUSTA: Procura o squashfs em qualquer subpasta extraída
+SFS_PATH=$(find "$WORK_DIR/extracted" -name "*filesystem.squashfs" -o -name "*.sfs" | head -n 1)
+
 if [ -z "$SFS_PATH" ]; then
     echo "Erro: Arquivo squashfs não encontrado!"
     exit 1
 fi
+
+echo "Arquivo SquashFS encontrado em: $SFS_PATH"
 
 echo "=== [4/6] Extraindo o sistema de arquivos (Rootfs) ==="
 sudo unsquashfs -d "$WORK_DIR/rootfs" "$SFS_PATH"
@@ -71,7 +75,7 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
-# Instalando pacotes e limpando listas inúteis para economizar espaço e RAM
+# Instalando pacotes, Steam, Lutris e limpando listas
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -82,7 +86,6 @@ EOF
 
 echo "=== [5/6] Recompactando o SquashFS de forma controlada ==="
 sudo rm -f "$SFS_PATH"
-# O parâmetro '-processors 2' impede que o processo exploda a memória RAM do servidor
 sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp gzip -b 1024k -processors 2 -noappend
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
