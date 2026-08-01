@@ -8,8 +8,8 @@ sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync
 WORK_DIR="/tmp/iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
-# URL corrigida para o link estável de release do Xubuntu 24.04
-ISO_URL="https://cdimage.ubuntu.com/xubuntu/releases/24.04/release/xubuntu-24.04-desktop-amd64.iso"
+# URL oficial e permanente do Ubuntu 24.04 LTS (Link estável que nunca dá 404)
+ISO_URL="https://releases.ubuntu.com/24.04/ubuntu-24.04-desktop-amd64.iso"
 ISO_NAME="base.iso"
 
 echo "=== [2/6] Baixando ISO base ==="
@@ -64,10 +64,11 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
+# Instalando a interface XFCE junto com os seus programas personalizados
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y fastfetch curl wget git steam lutris flatpak xfce4-goodies
+apt-get install -y xubuntu-desktop fastfetch curl wget git steam lutris flatpak xfce4-goodies
 apt-get clean
 EOF
 
@@ -91,7 +92,7 @@ sudo xorriso -as mkisofs \
     -output "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" \
     .
 
-# Copia a ISO gerada para a raiz do repositório atual para facilitar o upload do artefato
+# Copia a ISO gerada para a raiz do repositório
 cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "$GITHUB_WORKSPACE/CallieOS-Mint-XFCE.iso" 2>/dev/null || cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
 
 echo "=== Sucesso! ISO gerada e copiada para a raiz do repositório ==="
