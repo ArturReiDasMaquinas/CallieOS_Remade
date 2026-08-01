@@ -126,13 +126,15 @@ sudo swapon /swapfile
 NEW_SFS_DIR=$(dirname "$SFS_PATH")
 sudo mkdir -p "$NEW_SFS_DIR"
 
-# Usando ZSTD nativo do Ubuntu 24.04 com 2 processadores para fluir rápido e sem travar
 sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp zstd -Xcompression-level 3 -no-duplicates -no-xattrs -processors 2 -noappend
 
 sudo swapoff /swapfile || true
 sudo rm -f /swapfile
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
+FINAL_ISO_PATH="$(pwd)/iso_work/output/CallieOS-Mint-XFCE.iso"
+mkdir -p "$(dirname "$FINAL_ISO_PATH")"
+
 cd "$WORK_DIR/extracted"
 
 sudo xorriso -as mkisofs \
@@ -145,10 +147,10 @@ sudo xorriso -as mkisofs \
     --eltorito-alt-boot \
     -e boot/grub/efi.img \
     -no-emul-boot \
-    -output "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" \
+    -output "$FINAL_ISO_PATH" \
     .
 
-cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
+cp "$FINAL_ISO_PATH" "../../CallieOS-Mint-XFCE.iso"
 
-echo "=== Sucesso! ISO gerada e copiada para a raiz do repositório ==="
-ls -lh ./CallieOS-Mint-XFCE.iso
+echo "=== Sucesso absoluto! ISO gerada e copiada para a raiz do repositório ==="
+ls -lh ../../CallieOS-Mint-XFCE.iso
