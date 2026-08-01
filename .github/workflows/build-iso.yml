@@ -16,3 +16,9 @@ jobs:
         run: |
           chmod +x build.sh
           sudo ./build.sh
+
+      - name: Enviar ISO como Artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: CallieOS-Mint-XFCE-ISO
+          path: /tmp/iso_work/output/*.iso
