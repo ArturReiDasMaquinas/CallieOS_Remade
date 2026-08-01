@@ -9,7 +9,7 @@ WORK_DIR="/tmp/iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
 # URL corrigida para o link estável de release do Xubuntu 24.04
-ISO_URL="https://releases.ubuntu.com/24.04/ubuntu-24.04-desktop-amd64.iso"
+ISO_URL="https://cdimage.ubuntu.com/xubuntu/releases/24.04/release/xubuntu-24.04-desktop-amd64.iso"
 ISO_NAME="base.iso"
 
 echo "=== [2/6] Baixando ISO base ==="
