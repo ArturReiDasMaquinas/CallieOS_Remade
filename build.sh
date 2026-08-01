@@ -3,13 +3,13 @@ set -e
 
 echo "=== [1/6] Instalando dependências de build ==="
 sudo apt-get update
-# ATENÇÃO: 'unsquashfs' foi removido daqui pois já vem dentro do squashfs-tools
 sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync
 
 WORK_DIR="/tmp/iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
-ISO_URL="https://releases.ubuntu.com/24.04/xubuntu-24.04.1-desktop-amd64.iso"
+# URL corrigida para o link estável de release do Xubuntu 24.04
+ISO_URL="https://cdimage.ubuntu.com/xubuntu/releases/24.04/release/xubuntu-24.04-desktop-amd64.iso"
 ISO_NAME="base.iso"
 
 echo "=== [2/6] Baixando ISO base ==="
@@ -91,5 +91,8 @@ sudo xorriso -as mkisofs \
     -output "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" \
     .
 
-echo "=== Sucesso! ISO gerada em: $WORK_DIR/output/CallieOS-Mint-XFCE.iso ==="
-ls -lh "$WORK_DIR/output/CallieOS-Mint-XFCE.iso"
+# Copia a ISO gerada para a raiz do repositório atual para facilitar o upload do artefato
+cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "$GITHUB_WORKSPACE/CallieOS-Mint-XFCE.iso" 2>/dev/null || cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
+
+echo "=== Sucesso! ISO gerada e copiada para a raiz do repositório ==="
+ls -lh ./CallieOS-Mint-XFCE.iso
