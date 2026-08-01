@@ -131,21 +131,30 @@ sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp zstd -Xcompression-level 3 
 sudo swapoff /swapfile || true
 sudo rm -f /swapfile
 
-echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
+echo "=== [6/6] Gerando a nova ISO final da CallieOS com caminhos dinâmicos ==="
 FINAL_ISO_PATH="$(pwd)/iso_work/output/CallieOS-Mint-XFCE.iso"
 mkdir -p "$(dirname "$FINAL_ISO_PATH")"
 
 cd "$WORK_DIR/extracted"
 
+# Encontra os arquivos de boot de forma 100% dinâmica na ISO extraída
+ELTORITO_BOOT=$(find . -name "eltorito.img" | head -n 1 | sed 's|^\./||')
+BOOT_CAT=$(find . -name "boot.cat" | head -n 1 | sed 's|^\./||')
+EFI_IMG=$(find . -name "efi.img" | head -n 1 | sed 's|^\./||')
+
+echo "Eltorito Boot encontrado: $ELTORITO_BOOT"
+echo "Boot Catalog encontrado: $BOOT_CAT"
+echo "EFI Image encontrada: $EFI_IMG"
+
 sudo xorriso -as mkisofs \
     -iso-level 3 \
     -full-iso9660-filenames \
     -volid "CallieOS_XFCE" \
-    -eltorito-boot boot/grub/i386-pc/eltorito.img \
-    -eltorito-catalog boot/grub/i386-pc/boot.cat \
+    -eltorito-boot "$ELTORITO_BOOT" \
+    -eltorito-catalog "$BOOT_CAT" \
     -no-emul-boot -boot-load-size 4 -boot-info-table \
     --eltorito-alt-boot \
-    -e boot/grub/efi.img \
+    -e "$EFI_IMG" \
     -no-emul-boot \
     -output "$FINAL_ISO_PATH" \
     .
