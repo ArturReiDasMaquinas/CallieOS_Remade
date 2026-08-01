@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+echo "=== [0/6] Liberando espaço em disco no runner do GitHub ==="
+sudo rm -rf /usr/local/lib/android
+sudo rm -rf /opt/ghc
+sudo rm -rf /opt/hostedtoolcache
+sudo rm -rf /usr/share/dotnet
+df -h
+
 echo "=== [1/6] Instalando dependências de build ==="
 sudo apt-get update
 sudo apt-get install -y squashfs-tools xorriso p7zip-full wget curl rsync
@@ -41,6 +48,10 @@ echo "Arquivo SquashFS encontrado em: $SFS_PATH"
 echo "=== [4/6] Extraindo o sistema de arquivos (Rootfs) ==="
 sudo unsquashfs -d "$WORK_DIR/rootfs" "$SFS_PATH"
 
+# Remove o squashfs original e a ISO base para liberar gigabytes de espaço em disco
+sudo rm -f "$SFS_PATH"
+sudo rm -f "$WORK_DIR/$ISO_NAME"
+
 echo "=== Aplicando customizações e identidade visual da CallieOS ==="
 echo "callieos" | sudo tee "$WORK_DIR/rootfs/etc/hostname"
 sudo cp /etc/resolv.conf "$WORK_DIR/rootfs/etc/resolv.conf"
@@ -75,7 +86,7 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
-# Instalando pacotes, Steam, Lutris e limpando listas
+# Instalando pacotes, Steam, Lutris e limpando listas do apt
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -84,18 +95,18 @@ apt-get clean
 rm -rf /var/lib/apt/lists/*
 EOF
 
-echo "=== [5/6] Criando Swap temporário e Recompactando o SquashFS sem risco de OOM ==="
-# Cria 4GB de swap para garantir que o GitHub Actions não mate o processo por falta de RAM
+echo "=== [5/6] Criando Swap e Recompactando o SquashFS ==="
 sudo fallocate -l 4G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 
-sudo rm -f "$SFS_PATH"
-# Usando lz4, bloco otimizado de 256k e sem checagem de duplicatas para poupar RAM ao máximo
+# Recria o caminho onde ficava o squashfs original
+NEW_SFS_DIR=$(dirname "$SFS_PATH")
+sudo mkdir -p "$NEW_SFS_DIR"
+
 sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -b 256k -no-duplicates -no-xattrs -processors 2 -noappend
 
-# Desativa o swap após terminar
 sudo swapoff /swapfile
 sudo rm -f /swapfile
 
