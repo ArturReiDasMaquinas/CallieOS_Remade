@@ -3,7 +3,8 @@ set -e
 
 echo "=== [1/6] Instalando dependências de build ==="
 sudo apt-get update
-sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync unsquashfs
+# ATENÇÃO: 'unsquashfs' foi removido daqui pois já vem dentro do squashfs-tools
+sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync
 
 WORK_DIR="/tmp/iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
