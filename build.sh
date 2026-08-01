@@ -126,7 +126,8 @@ sudo swapon /swapfile
 NEW_SFS_DIR=$(dirname "$SFS_PATH")
 sudo mkdir -p "$NEW_SFS_DIR"
 
-sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp lz4 -b 256k -no-recovery -no-duplicates -no-xattrs -processors 1 -noappend
+# Usando ZSTD nativo do Ubuntu 24.04 com 2 processadores para fluir rápido e sem travar
+sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp zstd -Xcompression-level 3 -no-duplicates -no-xattrs -processors 2 -noappend
 
 sudo swapoff /swapfile || true
 sudo rm -f /swapfile
