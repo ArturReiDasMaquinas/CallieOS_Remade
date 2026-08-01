@@ -8,8 +8,6 @@ sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync unsqu
 WORK_DIR="/tmp/iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
-# URL da ISO base (exemplo: Xubuntu 24.04 LTS ou Linux Mint XFCE base)
-# Você pode substituir pelo link direto da ISO que preferir
 ISO_URL="https://releases.ubuntu.com/24.04/xubuntu-24.04.1-desktop-amd64.iso"
 ISO_NAME="base.iso"
 
@@ -22,7 +20,6 @@ echo "=== [3/6] Extraindo a ISO ==="
 sudo xorriso -osirrox on -indev "$WORK_DIR/$ISO_NAME" -extract / "$WORK_DIR/extracted"
 chmod -R +w "$WORK_DIR/extracted"
 
-# Localizar o arquivo squashfs
 SFS_PATH=$(find "$WORK_DIR/extracted" -name "filesystem.squashfs" -o -name "airootfs.sfs" -quit)
 if [ -z "$SFS_PATH" ]; then
     echo "Erro: Arquivo squashfs não encontrado!"
@@ -32,34 +29,47 @@ fi
 echo "=== [4/6] Extraindo o sistema de arquivos (Rootfs) ==="
 sudo unsquashfs -d "$WORK_DIR/rootfs" "$SFS_PATH"
 
-# ==========================================
-# APLICAÇÃO DE CUSTOMIZAÇÕES DA CALLIEOS
-# ==========================================
-echo "=== Aplicando customizações da CallieOS ==="
-
-# Definir hostname da live session
-echo "callieos-live" | sudo tee "$WORK_DIR/rootfs/etc/hostname"
-
-# Adicionar repositórios ou atualizar pacotes (opcional)
+echo "=== Aplicando customizações e identidade visual da CallieOS ==="
+echo "callieos" | sudo tee "$WORK_DIR/rootfs/etc/hostname"
 sudo cp /etc/resolv.conf "$WORK_DIR/rootfs/etc/resolv.conf"
 
-# Exemplo de comandos executados via chroot para instalar ferramentas/temas
+sudo mkdir -p "$WORK_DIR/rootfs/usr/share/backgrounds/callie"
+sudo mkdir -p "$WORK_DIR/rootfs/usr/share/pixmaps"
+sudo mkdir -p "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml"
+
+if [ -f "./assets/wallpaper1.png" ]; then
+    sudo cp ./assets/wallpaper1.png "$WORK_DIR/rootfs/usr/share/backgrounds/callie/wallpaper1.png"
+fi
+
+if [ -f "./assets/wallpaper2.png" ]; then
+    sudo cp ./assets/wallpaper2.png "$WORK_DIR/rootfs/usr/share/backgrounds/callie/wallpaper2.png"
+fi
+
+if [ -f "./assets/logo.png" ]; then
+    sudo cp ./assets/logo.png "$WORK_DIR/rootfs/usr/share/pixmaps/CallieLogo.png"
+fi
+
+sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" > /dev/null << 'XFCEXML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-desktop" version="1.0">
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitor0" type="empty">
+        <property name="image-path" type="string" value="/usr/share/backgrounds/callie/wallpaper1.png"/>
+        <property name="image-style" type="int" value="5"/>
+      </property>
+    </property>
+  </property>
+</channel>
+XFCEXML
+
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y neofetch htop git curl xfce4-goodies
-# Adicione aqui mais comandos de personalização se desejar
+apt-get install -y fastfetch curl wget git steam lutris flatpak xfce4-goodies
 apt-get clean
 EOF
 
-# Injetar wallpapers ou arquivos personalizados (se houver uma pasta 'assets' no repo)
-if [ -d "./assets" ]; then
-    sudo cp -r ./assets/* "$WORK_DIR/rootfs/usr/share/backgrounds/" 2>/dev/null || true
-fi
-
-# ==========================================
-# RECOMPILAÇÃO DA ISO
-# ==========================================
 echo "=== [5/6] Recompactando o SquashFS ==="
 sudo rm -f "$SFS_PATH"
 sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp xz -b 1M -noappend
@@ -67,7 +77,6 @@ sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp xz -b 1M -noappend
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
 cd "$WORK_DIR/extracted"
 
-# Recriar a ISO bootável compatível com UEFI e Legacy BIOS
 sudo xorriso -as mkisofs \
     -iso-level 3 \
     -full-iso9660-filenames \
