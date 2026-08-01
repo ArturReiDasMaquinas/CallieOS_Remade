@@ -36,15 +36,25 @@ sudo rm -rf "$WORK_DIR/extracted"/*
 7z x "$WORK_DIR/$ISO_NAME" -o"$WORK_DIR/extracted" -y
 sudo chmod -R +w "$WORK_DIR/extracted"
 
-# BUSCA EXATA: Foca estritamente no filesystem.squashfs principal do Ubuntu
-SFS_PATH=$(find "$WORK_DIR/extracted" -name "filesystem.squashfs" | head -n 1)
+# BUSCA INTELIGENTE: Seleciona automaticamente o maior .squashfs (o sistema operacional real)
+SFS_PATH=""
+MAX_SIZE=0
+while IFS= read -r file; do
+    if [ -f "$file" ]; then
+        SIZE=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null)
+        if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+            MAX_SIZE="$SIZE"
+            SFS_PATH="$file"
+        fi
+    fi
+done < <(find "$WORK_DIR/extracted" -name "*.squashfs")
 
 if [ -z "$SFS_PATH" ]; then
-    echo "Erro: Arquivo principal filesystem.squashfs não encontrado!"
+    echo "Erro: Nenhum arquivo squashfs foi encontrado na ISO!"
     exit 1
 fi
 
-echo "Arquivo SquashFS principal encontrado em: $SFS_PATH"
+echo "Arquivo SquashFS principal selecionado (tamanho: $MAX_SIZE bytes): $SFS_PATH"
 
 echo "=== [4/6] Extraindo o sistema de arquivos (Rootfs) ==="
 sudo unsquashfs -d "$WORK_DIR/rootfs" "$SFS_PATH"
