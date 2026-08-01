@@ -5,7 +5,9 @@ echo "=== [1/6] Instalando dependências de build ==="
 sudo apt-get update
 sudo apt-get install -y squashfs-tools xorriso genisoimage wget curl rsync
 
-WORK_DIR="/tmp/iso_work"
+# CORREÇÃO CRÍTICA: Usando o diretório local do repositório em vez de /tmp
+# para evitar o estouro de espaço no tmpfs do GitHub Actions.
+WORK_DIR="./iso_work"
 mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
 echo "=== [2/6] Determinando e baixando a ISO base do Ubuntu 24.04 LTS dinamicamente ==="
@@ -26,7 +28,7 @@ fi
 
 echo "=== [3/6] Extraindo a ISO ==="
 sudo xorriso -osirrox on -indev "$WORK_DIR/$ISO_NAME" -extract / "$WORK_DIR/extracted"
-chmod -R +w "$WORK_DIR/extracted"
+sudo chmod -R +w "$WORK_DIR/extracted"
 
 SFS_PATH=$(find "$WORK_DIR/extracted" -name "filesystem.squashfs" -o -name "airootfs.sfs" -quit)
 if [ -z "$SFS_PATH" ]; then
@@ -79,9 +81,8 @@ apt-get install -y xubuntu-desktop fastfetch curl wget git steam lutris flatpak 
 apt-get clean
 EOF
 
-echo "=== [5/6] Recompactando o SquashFS (Otimizado com gzip para poupar RAM) ==="
+echo "=== [5/6] Recompactando o SquashFS ==="
 sudo rm -f "$SFS_PATH"
-# Trocado de 'xz' para 'gzip' para evitar estouro de memória RAM no GitHub Actions
 sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp gzip -b 1024k -noappend
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
@@ -101,11 +102,7 @@ sudo xorriso -as mkisofs \
     .
 
 # Copia a ISO gerada para a raiz do repositório
-if [ -n "$GITHUB_WORKSPACE" ]; then
-    cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "$GITHUB_WORKSPACE/CallieOS-Mint-XFCE.iso"
-else
-    cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
-fi
+cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "./CallieOS-Mint-XFCE.iso"
 
 echo "=== Sucesso! ISO gerada e copiada para a raiz do repositório ==="
 ls -lh ./CallieOS-Mint-XFCE.iso
