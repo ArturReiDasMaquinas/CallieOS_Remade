@@ -10,7 +10,6 @@ mkdir -p "$WORK_DIR/extracted" "$WORK_DIR/rootfs" "$WORK_DIR/output"
 
 echo "=== [2/6] Determinando e baixando a ISO base do Ubuntu 24.04 LTS dinamicamente ==="
 BASE_URL="https://releases.ubuntu.com/24.04"
-# Captura o nome exato do arquivo ISO atual na página de releases para evitar qualquer erro 404
 ISO_FILE=$(curl -s "$BASE_URL/" | grep -oE 'ubuntu-24.04([0-9.-]*)-desktop-amd64\.iso' | head -n 1)
 
 if [ -z "$ISO_FILE" ]; then
@@ -72,7 +71,7 @@ sudo tee "$WORK_DIR/rootfs/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfc
 </channel>
 XFCEXML
 
-# Instalando a interface XFCE e os pacotes personalizados no ambiente chroot
+# Instalando a interface XFCE e os pacotes personalizados
 sudo chroot "$WORK_DIR/rootfs" /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -80,9 +79,10 @@ apt-get install -y xubuntu-desktop fastfetch curl wget git steam lutris flatpak 
 apt-get clean
 EOF
 
-echo "=== [5/6] Recompactando o SquashFS ==="
+echo "=== [5/6] Recompactando o SquashFS (Otimizado com gzip para poupar RAM) ==="
 sudo rm -f "$SFS_PATH"
-sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp xz -b 1M -noappend
+# Trocado de 'xz' para 'gzip' para evitar estouro de memória RAM no GitHub Actions
+sudo mksquashfs "$WORK_DIR/rootfs" "$SFS_PATH" -comp gzip -b 1024k -noappend
 
 echo "=== [6/6] Gerando a nova ISO final da CallieOS ==="
 cd "$WORK_DIR/extracted"
@@ -100,7 +100,7 @@ sudo xorriso -as mkisofs \
     -output "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" \
     .
 
-# Copia a ISO gerada para a raiz do repositório com suporte ao GitHub Actions
+# Copia a ISO gerada para a raiz do repositório
 if [ -n "$GITHUB_WORKSPACE" ]; then
     cp "$WORK_DIR/output/CallieOS-Mint-XFCE.iso" "$GITHUB_WORKSPACE/CallieOS-Mint-XFCE.iso"
 else
